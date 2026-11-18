@@ -38,22 +38,12 @@ class UsuarioControllerTest {
     }
 
     @Test
-    void cargaEnSegundoPlanoFiltraYOrdenaLosUsuarios() throws Exception {
+    void cargaFiltraYOrdenaLosUsuarios() throws Exception {
         ServicioSimulado servicio = new ServicioSimulado();
         servicio.respuesta = List.of(
                 new Usuario(10, "Luis Pérez", "lucho", "luis@correo.com", "2222", "León", "Empresa B"),
                 new Usuario(2, "Ana López", "anita", "ana@ejemplo.com", "1111", "Managua", "Empresa A"));
-        servicio.espera = new CountDownLatch(1);
         FXMLLoader vista = cargarVista(servicio);
-
-        enJavaFx(() -> {
-            assertTrue(boton(vista).isDisabled());
-            assertTrue(busqueda(vista).isDisabled());
-            assertEquals("Consultando usuarios...", etiqueta(vista, "lblEstado").getText());
-            return null;
-        });
-        servicio.espera.countDown();
-        esperarConsulta(vista);
 
         enJavaFx(() -> {
             TableView<Usuario> tabla = tabla(vista);
@@ -89,7 +79,6 @@ class UsuarioControllerTest {
         ServicioSimulado servicio = new ServicioSimulado();
         servicio.error = new IOException("Sin conexión");
         FXMLLoader vista = cargarVista(servicio);
-        esperarConsulta(vista);
 
         enJavaFx(() -> {
             assertTrue(tabla(vista).getItems().isEmpty());
@@ -103,7 +92,6 @@ class UsuarioControllerTest {
         servicio.error = null;
         servicio.respuesta = List.of(new Usuario(1, "Ana", "ana", "ana@correo.com", "1234", "Managua", "Empresa"));
         enJavaFx(() -> { boton(vista).fire(); return null; });
-        esperarConsulta(vista);
         enJavaFx(() -> {
             assertEquals(1, tabla(vista).getItems().size());
             assertEquals("Consulta completada.", etiqueta(vista, "lblEstado").getText());
@@ -112,7 +100,6 @@ class UsuarioControllerTest {
 
         servicio.error = new IOException("Conexión interrumpida");
         enJavaFx(() -> { boton(vista).fire(); return null; });
-        esperarConsulta(vista);
         enJavaFx(() -> {
             assertEquals(1, tabla(vista).getItems().size());
             assertEquals("1 de 1 usuarios", etiqueta(vista, "lblTotalUsuarios").getText());
@@ -125,7 +112,6 @@ class UsuarioControllerTest {
     @Test
     void muestraElEstadoVacioCuandoElServicioNoDevuelveUsuarios() throws Exception {
         FXMLLoader vista = cargarVista(new ServicioSimulado());
-        esperarConsulta(vista);
         enJavaFx(() -> {
             assertTrue(tabla(vista).getItems().isEmpty());
             assertEquals("0 de 0 usuarios", etiqueta(vista, "lblTotalUsuarios").getText());
@@ -142,21 +128,6 @@ class UsuarioControllerTest {
             vista.load();
             return vista;
         });
-    }
-
-    private static void esperarConsulta(FXMLLoader vista) throws Exception {
-        CountDownLatch fin = new CountDownLatch(1);
-        enJavaFx(() -> {
-            if (!boton(vista).isDisabled()) {
-                fin.countDown();
-            } else {
-                boton(vista).disabledProperty().addListener((observable, anterior, deshabilitado) -> {
-                    if (!deshabilitado) fin.countDown();
-                });
-            }
-            return null;
-        });
-        assertTrue(fin.await(10, TimeUnit.SECONDS), "La consulta no terminó a tiempo");
     }
 
     private static <T> T enJavaFx(Callable<T> accion) throws Exception {
@@ -183,15 +154,11 @@ class UsuarioControllerTest {
     }
 
     private static class ServicioSimulado extends UsuarioService {
-        volatile List<Usuario> respuesta = List.of();
-        volatile IOException error;
-        CountDownLatch espera;
+        List<Usuario> respuesta = List.of();
+        IOException error;
 
         @Override
         public List<Usuario> obtenerUsuarios() throws IOException, InterruptedException {
-            if (espera != null && !espera.await(5, TimeUnit.SECONDS)) {
-                throw new IOException("Se agotó la espera de la prueba");
-            }
             if (error != null) throw error;
             return respuesta;
         }

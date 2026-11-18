@@ -6,5 +6,6 @@ module com.example.servicioweb {
 
 
     opens com.example.servicioweb to javafx.fxml;
+    opens com.example.servicioweb.model to javafx.base;
     exports com.example.servicioweb;
 }

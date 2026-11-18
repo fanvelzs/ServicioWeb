@@ -17,6 +17,7 @@ public class UsuarioService {
     private static final String URL = "https://jsonplaceholder.typicode.com/users";
 
     public List<Usuario> obtenerUsuarios() throws IOException, InterruptedException {
+        // 1. Hacemos una peticion GET a la URL de usuarios.
         HttpClient cliente = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -31,13 +32,15 @@ public class UsuarioService {
         if (response.statusCode() != 200) {
             throw new IOException("Error al consultar usuarios (HTTP " + response.statusCode() + ").");
         }
+        // 2. Leemos el JSON recibido.
         ObjectMapper mapper = new ObjectMapper();
         JsonNode datos = mapper.readTree(response.body());
 
-        if (!datos.isArray()) {
+        if (datos == null || !datos.isArray()) {
             throw new IOException("La respuesta no contiene una lista de usuarios.");
         }
         List<Usuario> usuarios = new ArrayList<>();
+        // 3. Convertimos cada objeto JSON en un Usuario.
         for (JsonNode nodo : datos) {
             Usuario usuario = new Usuario(
                     nodo.path("id").asInt(),
